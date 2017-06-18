@@ -423,6 +423,7 @@ function UQFinalViewModel() {
             courseSpec.isLinear = offeringData.isLinear;
             courseSpec.calculable = offeringData.calculable;
             courseSpec.gradeCutoffs = [0, 30, 46, 50, 65, 75, 85];
+            courseSpec.code = offeringData.course.courseCode;
 
             var course = new CourseVm(self, courseSpec);
             self.course(course);
