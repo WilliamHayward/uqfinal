@@ -156,19 +156,55 @@ function CourseVm(app, spec) {
 	
 	// Calculations
 	self.totalScore = ko.pureComputed(function() {
-        return _.chain(
-            self.assessmentItems
-        ).map(function(item) {
-            if (item.isNumericWeighting()) return item.weightedScore();
-        }).sum().value();
+        switch (self.code) {
+            case "CSSE2310":
+                var assignments = _.chain(
+                    self.assessmentItems
+                ).map(function(item) {
+                    if (item.weight() == 25) return item.weightedScore();
+                }).sum().value() * 4; // * 4 because of weighted score and linear issues
+
+                var midsem = _.chain(
+                    self.assessmentItems
+                ).map(function(item) {
+                    if (item.weight() == 15) return item.weightedScore();
+                }).sum().value();
+
+                return Math.sqrt(assignments * midsem);
+            default:
+                return _.chain(
+                    self.assessmentItems
+                ).map(function(item) {
+                    if (item.isNumericWeighting()) return item.weightedScore();
+                }).sum().value();
+        }
+        
 	});
 	
 	self.totalDropped = ko.pureComputed(function() {
-        return _.chain(
-            self.assessmentItems
-        ).map(function(item) {
-            if (item.isNumericWeighting()) return item.weightedDropped();
-        }).sum().value();
+        switch (self.code) {
+            case "CSSE2310":
+                var assignments = _.chain(
+                    self.assessmentItems
+                ).map(function(item) {
+                    if (item.weight() == 25) return item.weightedScore();
+                }).sum().value() * 4; // * 4 because of weighted score and linear issues
+
+                var midsem = _.chain(
+                    self.assessmentItems
+                ).map(function(item) {
+                    if (item.weight() == 15) return item.weightedScore();
+                }).sum().value();
+
+                return 100 - Math.sqrt(assignments * midsem);
+            default:
+                return _.chain(
+                    self.assessmentItems
+                ).map(function(item) {
+                    if (item.isNumericWeighting()) return item.weightedDropped();
+                }).sum().value();
+        }
+
 	});
 	
 	self.totalScorePrint = ko.pureComputed(function() {
@@ -204,10 +240,40 @@ function CourseVm(app, spec) {
     });
 	
 	self.requiredGrades = ko.pureComputed(function() {
-        return _.map(self.gradeCutoffs, function(cutoff) {
-            var requiredGrade = Math.ceil( (cutoff - self.totalScore()) / self.unprovidedTotalWeight() * 100);
-            return _.max([0, requiredGrade]);
-        });
+        switch (self.code) {
+            case "CSSE2310":
+                var assignments = _.chain(
+                    self.assessmentItems
+                ).map(function(item) {
+                    if (item.weight() == 25) return item.weightedScore();
+                }).sum().value();
+
+                var midsem = _.chain(
+                    self.assessmentItems
+                ).map(function(item) {
+                    if (item.weight() == 15) return item.weightedScore();
+                }).sum().value();
+
+                return _.map(self.gradeCutoffs, function(cutoff) {
+                    var requiredExamTotal = Math.ceil(
+                        (cutoff * cutoff) / assignments
+                    );
+                    var requiredGrade = Math.ceil(
+                        Math.min(
+                        (requiredExamTotal - 2 * midsem) / 0.7,
+                        (requiredExamTotal - midsem) / 0.85
+                    ));
+
+                    return _.max([0, requiredGrade]);
+                });
+
+            default:
+                return _.map(self.gradeCutoffs, function(cutoff) {
+                    var requiredGrade = Math.ceil( (cutoff - self.totalScore()) / self.unprovidedTotalWeight() * 100);
+                    return _.max([0, requiredGrade]);
+                });
+        }
+        
 	});
 	
 	self.afterAssessmentRender = function(elements, data) {
@@ -423,7 +489,7 @@ function UQFinalViewModel() {
             courseSpec.isLinear = offeringData.isLinear;
             courseSpec.calculable = offeringData.calculable;
             courseSpec.gradeCutoffs = [0, 30, 46, 50, 65, 75, 85];
-            courseSpec.code = offeringData.course.courseCode;
+            courseSpec.courseCode = offeringData.course.courseCode;
 
             var course = new CourseVm(self, courseSpec);
             self.course(course);
